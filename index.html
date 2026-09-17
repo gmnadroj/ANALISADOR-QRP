@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Conversor e Comparador QRP - SCNES</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+  :root {
+    --cor-fundo: #f2f4f7;
+    --cor-cartao: #ffffff;
+    --cor-texto: #1c1c1c;
+    --cor-texto-suave: #5b6472;
+    --cor-borda: #d9dee3;
+    --cor-destaque: #1f4e78;
+    --cor-destaque-texto: #ffffff;
+    --cor-comparar: #2e7d32;
+    --cor-comparar-hover: #256828;
+    --cor-converter: #1f4e78;
+    --cor-converter-hover: #163a58;
+    --cor-log-fundo: #10151c;
+    --cor-log-texto: #d7e3ee;
+    --cor-novo: #c6efce;
+    --cor-novo-texto: #1e5c28;
+    --cor-saiu: #ffc7ce;
+    --cor-saiu-texto: #7a1a22;
+    --cor-alterado: #ffeb9c;
+    --cor-alterado-texto: #6b5900;
+    --cor-mantido: #d9d9d9;
+    --cor-mantido-texto: #3a3a3a;
+    --cor-drop-fundo: #f8fafc;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --cor-fundo: #14181f;
+      --cor-cartao: #1c222b;
+      --cor-texto: #eef1f5;
+      --cor-texto-suave: #9aa4b2;
+      --cor-borda: #333c48;
+      --cor-log-fundo: #0a0d12;
+      --cor-log-texto: #c9d6e3;
+      --cor-drop-fundo: #20262f;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --cor-fundo: #14181f;
+    --cor-cartao: #1c222b;
+    --cor-texto: #eef1f5;
+    --cor-texto-suave: #9aa4b2;
+    --cor-borda: #333c48;
+    --cor-log-fundo: #0a0d12;
+    --cor-log-texto: #c9d6e3;
+    --cor-drop-fundo: #20262f;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--cor-fundo);
+    color: var(--cor-texto);
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+  }
+
+  header.topo {
+    background: var(--cor-destaque);
+    color: var(--cor-destaque-texto);
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  header.topo h1 {
+    font-size: 1.25rem;
+    margin: 0;
+    font-weight: 700;
+  }
+
+  header.topo span.versao {
+    font-size: 0.8rem;
+    opacity: 0.85;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+
+  .abas {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid var(--cor-borda);
+    overflow-x: auto;
+  }
+
+  .aba-botao {
+    background: transparent;
+    border: none;
+    padding: 12px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--cor-texto-suave);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+
+  .aba-botao.ativa {
+    color: var(--cor-destaque);
+    border-bottom-color: var(--cor-destaque);
+  }
+
+  .painel-aba { display: none; }
+  .painel-aba.ativo { display: block; }
+
+  .colunas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 720px) {
+    .colunas { grid-template-columns: 1fr; }
+  }
+
+  .cartao {
+    background: var(--cor-cartao);
+    border: 1px solid var(--cor-borda);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .cartao h2 {
+    font-size: 1rem;
+    margin: 0 0 10px;
+  }
+
+  .zona-arquivo {
+    border: 2px dashed var(--cor-borda);
+    background: var(--cor-drop-fundo);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+
+  .zona-arquivo.arrastando {
+    border-color: var(--cor-destaque);
+  }
+
+  .zona-arquivo p {
+    margin: 4px 0;
+    font-size: 0.85rem;
+    color: var(--cor-texto-suave);
+  }
+
+  button.botao-selecionar {
+    background: var(--cor-destaque);
+    color: var(--cor-destaque-texto);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  button.botao-selecionar:hover { filter: brightness(1.08); }
+
+  ul.lista-arquivos {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    max-height: 140px;
+    overflow-y: auto;
+    border: 1px solid var(--cor-borda);
+    border-radius: 6px;
+  }
+
+  ul.lista-arquivos li {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    border-bottom: 1px solid var(--cor-borda);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  ul.lista-arquivos li:last-child { border-bottom: none; }
+
+  ul.lista-arquivos .remover {
+    cursor: pointer;
+    color: #b3261e;
+    font-weight: 700;
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+  }
+
+  .vazio-lista {
+    padding: 10px;
+    font-size: 0.8rem;
+    color: var(--cor-texto-suave);
+    text-align: center;
+  }
+
+  .linha-acoes-lista {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .linha-acoes-lista button {
+    background: transparent;
+    border: 1px solid var(--cor-borda);
+    color: var(--cor-texto);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  .campo-competencia {
+    margin-top: 12px;
+  }
+
+  .campo-competencia label {
+    font-size: 0.8rem;
+    color: var(--cor-texto-suave);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .campo-competencia input {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--cor-borda);
+    background: var(--cor-cartao);
+    color: var(--cor-texto);
+    font-size: 0.88rem;
+  }
+
+  .botao-grande {
+    width: 100%;
+    margin-top: 18px;
+    padding: 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+
+  .botao-grande.comparar { background: var(--cor-comparar); }
+  .botao-grande.comparar:hover { background: var(--cor-comparar-hover); }
+  .botao-grande.converter { background: var(--cor-converter); }
+  .botao-grande.converter:hover { background: var(--cor-converter-hover); }
+
+  .botao-grande:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .texto-info {
+    font-size: 0.82rem;
+    color: var(--cor-texto-suave);
+    margin-top: 10px;
+  }
+
+  .resumo-cartoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .resumo-item {
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+
+  .resumo-item .numero {
+    font-size: 1.4rem;
+    font-weight: 700;
+    display: block;
+  }
+
+  .resumo-item.novo { background: var(--cor-novo); color: var(--cor-novo-texto); }
+  .resumo-item.saiu { background: var(--cor-saiu); color: var(--cor-saiu-texto); }
+  .resumo-item.alterado { background: var(--cor-alterado); color: var(--cor-alterado-texto); }
+  .resumo-item.mantido { background: var(--cor-mantido); color: var(--cor-mantido-texto); }
+
+  .caixa-log {
+    background: var(--cor-cartao);
+    border: 1px solid var(--cor-borda);
+    border-radius: 10px;
+    margin-top: 20px;
+    overflow: hidden;
+  }
+
+  .caixa-log h3 {
+    margin: 0;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--cor-borda);
+  }
+
+  .caixa-log pre {
+    margin: 0;
+    background: var(--cor-log-fundo);
+    color: var(--cor-log-texto);
+    font-family: "Consolas", monospace;
+    font-size: 0.78rem;
+    padding: 12px 14px;
+    max-height: 220px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <h1>Conversor e Comparador QRP &mdash; SCNES</h1>
+  <span class="versao">v4.0 web &middot; comparação de competências</span>
+</header>
+
+<main>
+
+  <div class="abas">
+    <button class="aba-botao ativa" data-aba="comparar">Comparar Competências</button>
+    <button class="aba-botao" data-aba="converter">Converter Competência Única</button>
+  </div>
+
+  <!-- ===================== ABA: COMPARAR ===================== -->
+  <section class="painel-aba ativo" id="painel-comparar">
+    <div class="colunas">
+
+      <div class="cartao">
+        <h2>Competência Anterior</h2>
+        <div class="zona-arquivo" id="zona-anterior">
+          <button class="botao-selecionar" type="button" id="botao-anterior">Selecionar competência anterior</button>
+          <p>ou arraste os arquivos .QRP aqui</p>
+        </div>
+        <input type="file" id="input-anterior" multiple accept=".qrp,.QRP">
+        <div id="lista-anterior"><div class="vazio-lista">Nenhum arquivo selecionado.</div></div>
+        <div class="linha-acoes-lista">
+          <button type="button" id="limpar-anterior">Limpar tudo</button>
+        </div>
+        <div class="campo-competencia">
+          <label for="rotulo-anterior">Competência (rótulo)</label>
+          <input type="text" id="rotulo-anterior" placeholder="detectado automaticamente">
+        </div>
+      </div>
+
+      <div class="cartao">
+        <h2>Competência Atual</h2>
+        <div class="zona-arquivo" id="zona-atual">
+          <button class="botao-selecionar" type="button" id="botao-atual">Selecionar competência atual</button>
+          <p>ou arraste os arquivos .QRP aqui</p>
+        </div>
+        <input type="file" id="input-atual" multiple accept=".qrp,.QRP">
+        <div id="lista-atual"><div class="vazio-lista">Nenhum arquivo selecionado.</div></div>
+        <div class="linha-acoes-lista">
+          <button type="button" id="limpar-atual">Limpar tudo</button>
+        </div>
+        <div class="campo-competencia">
+          <label for="rotulo-atual">Competência (rótulo)</label>
+          <input type="text" id="rotulo-atual" placeholder="detectado automaticamente">
+        </div>
+      </div>
+
+    </div>
+
+    <button class="botao-grande comparar" id="botao-comparar">COMPARAR</button>
+    <p class="texto-info">
+      Ao comparar, o Excel com o relatório completo é gerado automaticamente
+      (abas: Resumo, Novos, Saíram, Mantidos, Alteração de Nome, Duplicados,
+      Histórico e Bases). Os arquivos .QRP são processados no seu navegador
+      &mdash; nada é enviado para nenhum servidor.
+    </p>
+
+    <div id="resumo-comparacao"></div>
+  </section>
+
+  <!-- ===================== ABA: CONVERTER ===================== -->
+  <section class="painel-aba" id="painel-converter">
+    <div class="cartao">
+      <h2>Competência a converter</h2>
+      <div class="zona-arquivo" id="zona-unica">
+        <button class="botao-selecionar" type="button" id="botao-unica">Selecionar arquivo(s) QRP</button>
+        <p>ou arraste os arquivos .QRP aqui</p>
+      </div>
+      <input type="file" id="input-unica" multiple accept=".qrp,.QRP">
+      <div id="lista-unica"><div class="vazio-lista">Nenhum arquivo selecionado.</div></div>
+      <div class="linha-acoes-lista">
+        <button type="button" id="limpar-unica">Limpar tudo</button>
+      </div>
+      <div class="campo-competencia">
+        <label for="rotulo-unica">Competência (rótulo)</label>
+        <input type="text" id="rotulo-unica" placeholder="detectado automaticamente">
+      </div>
+    </div>
+
+    <button class="botao-grande converter" id="botao-converter">CONVERTER</button>
+    <p class="texto-info">
+      Converte um ou mais arquivos .QRP da MESMA competência em uma planilha
+      Excel, identificando duplicidades.
+    </p>
+
+    <div id="resumo-conversao"></div>
+  </section>
+
+  <div class="caixa-log">
+    <h3>Andamento</h3>
+    <pre id="log"></pre>
+  </div>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  // ============================================================
+  // NUCLEO DE EXTRACAO (mesma logica da versao Python/desktop)
+  // ============================================================
+
+  function limparNome(nome) {
+    if (!nome) return "";
+    nome = nome.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+    const permitido = "ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝàáâãäåçèéêëìíîïñòóôõöùúûüý";
+    nome = nome.replace(/[\u0100-\uFFFF]/g, (ch) => (permitido.indexOf(ch) !== -1 ? ch : ""));
+    nome = nome.replace(/\s+/g, " ");
+    return nome.trim();
+  }
+
+  function localizarSecaoEstabelecimentos(texto) {
+    const marcador = "ESTABELECIMENTO(S) EXPORTADO(S) NESTE ARQUIVO";
+    const pos = texto.toUpperCase().indexOf(marcador);
+    if (pos === -1) {
+      throw new Error(
+        "A seção 'ESTABELECIMENTO(S) EXPORTADO(S) NESTE ARQUIVO' não foi " +
+          "encontrada. Verifique se o QRP é o relatório de estabelecimentos do SCNES."
+      );
+    }
+    return pos + marcador.length;
+  }
+
+  function extrairEstabelecimentosRobusto(texto, inicio) {
+    const conteudo = texto.slice(inicio);
+    const registros = [];
+    const padrao = /(?<!\d)(\d{7})\s*-\s*/g;
+    const matches = [...conteudo.matchAll(padrao)];
+    for (let i = 0; i < matches.length; i++) {
+      const m = matches[i];
+      const cnes = m[1];
+      const inicioNome = m.index + m[0].length;
+      const fimNome = i + 1 < matches.length ? matches[i + 1].index : conteudo.length;
+      let trecho = conteudo.slice(inicioNome, fimNome);
+      const corte = trecho.search(/[\x00-\x1F]/);
+      if (corte !== -1) trecho = trecho.slice(0, corte);
+      let nome = limparNome(trecho);
+      nome = nome.replace(/\s+/g, " ").trim();
+      if (!nome) continue;
+      if (nome.length > 150) nome = nome.slice(0, 150).trim();
+      registros.push({ CNES: cnes, Estabelecimento: nome });
+    }
+    return registros;
+  }
+
+  function detectarCompetencia(nomeArquivo, texto) {
+    const padroes = [
+      /COMPET[ÊE]NCIA[:\s]+(\d{2}\/\d{4})/,
+      /COMPET[ÊE]NCIA[:\s]+(\d{4}\/\d{2})/,
+      /COMPET[ÊE]NCIA[:\s]+(\d{6})/,
+      /COMPET[ÊE]NCIA[:\s]+(\d{2}\d{4})/,
+    ];
+    const upper = texto.toUpperCase();
+    for (const p of padroes) {
+      const m = upper.match(p);
+      if (m) return m[1];
+    }
+    return nomeArquivo.replace(/\.[^.]+$/, "");
+  }
+
+  async function lerQrp(file) {
+    const buf = await file.arrayBuffer();
+    const decoder = new TextDecoder("utf-16le");
+    return decoder.decode(buf);
+  }
+
+  async function processarArquivo(file, log) {
+    log(`Lendo arquivo: ${file.name}`);
+    const texto = await lerQrp(file);
+    const competencia = detectarCompetencia(file.name, texto);
+    const inicio = localizarSecaoEstabelecimentos(texto);
+    const registros = extrairEstabelecimentosRobusto(texto, inicio);
+    if (registros.length === 0) {
+      throw new Error(`Nenhum estabelecimento foi encontrado em "${file.name}".`);
+    }
+    registros.forEach((r) => (r.Arquivo = file.name));
+    log(`  -> competência detectada: ${competencia} | ${registros.length} registro(s) bruto(s)`);
+    return { competencia, registros };
+  }
+
+  async function processarMultiplos(files, log) {
+    if (!files.length) throw new Error("Nenhum arquivo foi selecionado.");
+    const competencias = [];
+    let registrosTotal = [];
+    for (const file of files) {
+      const { competencia, registros } = await processarArquivo(file, log);
+      competencias.push(competencia);
+      registrosTotal = registrosTotal.concat(registros);
+    }
+    const rotulosUnicos = [...new Set(competencias)].sort();
+    return { rotulo: rotulosUnicos.join(" + "), registros: registrosTotal };
+  }
+
+  function consolidarCompetencia(registros) {
+    const contagem = {};
+    registros.forEach((r) => (contagem[r.CNES] = (contagem[r.CNES] || 0) + 1));
+    const cnesDuplicados = new Set(Object.keys(contagem).filter((c) => contagem[c] > 1));
+    const duplicados = registros
+      .filter((r) => cnesDuplicados.has(r.CNES))
+      .slice()
+      .sort((a, b) => a.CNES.localeCompare(b.CNES));
+    const mapa = {};
+    for (const r of registros) {
+      if (!(r.CNES in mapa)) mapa[r.CNES] = r.Estabelecimento;
+    }
+    return { mapa, duplicados, totalBruto: registros.length, totalUnico: Object.keys(mapa).length };
+  }
+
+  function normalizarComparacao(nome) {
+    return (nome || "").replace(/\s+/g, " ").trim().toUpperCase();
+  }
+
+  function compararCompetencias(mapaAnterior, mapaAtual) {
+    const cnesAnterior = new Set(Object.keys(mapaAnterior));
+    const cnesAtual = new Set(Object.keys(mapaAtual));
+
+    const cnesNovos = [...cnesAtual].filter((c) => !cnesAnterior.has(c)).sort();
+    const cnesSairam = [...cnesAnterior].filter((c) => !cnesAtual.has(c)).sort();
+    const cnesComuns = [...cnesAnterior].filter((c) => cnesAtual.has(c)).sort();
+
+    const novos = cnesNovos.map((c) => ({ CNES: c, Estabelecimento: mapaAtual[c] }));
+    const sairam = cnesSairam.map((c) => ({ CNES: c, Estabelecimento: mapaAnterior[c] }));
+
+    const mantidos = [];
+    const alterados = [];
+    for (const c of cnesComuns) {
+      const na = mapaAnterior[c], nt = mapaAtual[c];
+      if (normalizarComparacao(na) === normalizarComparacao(nt)) {
+        mantidos.push({ CNES: c, Estabelecimento: nt });
+      } else {
+        alterados.push({ CNES: c, "Nome Anterior": na, "Nome Atual": nt });
+      }
+    }
+    return { novos, sairam, mantidos, alterados };
+  }
+
+  function montarHistorico(mapaAnterior, mapaAtual, rotuloAnterior, rotuloAtual) {
+    const todos = [...new Set([...Object.keys(mapaAnterior), ...Object.keys(mapaAtual)])].sort();
+    return todos.map((c) => {
+      const na = mapaAnterior[c] || "";
+      const nt = mapaAtual[c] || "";
+      let status;
+      if (c in mapaAnterior && c in mapaAtual) {
+        status = normalizarComparacao(na) === normalizarComparacao(nt) ? "MANTIDO" : "ALTERAÇÃO DE NOME";
+      } else if (c in mapaAtual) {
+        status = "NOVO";
+      } else {
+        status = "SAIU";
+      }
+      const linha = { CNES: c };
+      linha[`Nome (${rotuloAnterior})`] = na;
+      linha[`Nome (${rotuloAtual})`] = nt;
+      linha["Status"] = status;
+      return linha;
+    });
+  }
+
+  // ============================================================
+  // GERACAO DO EXCEL (xlsx-js-style)
+  // ============================================================
+
+  const CORES = {
+    cabecalho: "1F4E78",
+    novo: "C6EFCE",
+    saiu: "FFC7CE",
+    alterado: "FFEB9C",
+    mantido: "D9D9D9",
+  };
+
+  function construirPlanilha(dados, colunas, opcoes) {
+    opcoes = opcoes || {};
+    const aoa = [colunas].concat(
+      dados.map((d) => colunas.map((c) => (d[c] !== undefined && d[c] !== null ? d[c] : "")))
+    );
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    colunas.forEach((_, idx) => {
+      const addr = XLSX.utils.encode_cell({ r: 0, c: idx });
+      if (ws[addr]) {
+        ws[addr].s = {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { patternType: "solid", fgColor: { rgb: CORES.cabecalho } },
+          alignment: { horizontal: "center", vertical: "center" },
+        };
+      }
+    });
+
+    if (opcoes.colunaStatus && opcoes.coresPorStatus) {
+      const idxStatus = colunas.indexOf(opcoes.colunaStatus);
+      if (idxStatus !== -1) {
+        dados.forEach((d, rowIdx) => {
+          const cor = opcoes.coresPorStatus[d[opcoes.colunaStatus]];
+          if (cor) {
+            colunas.forEach((_, colIdx) => {
+              const addr = XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx });
+              if (ws[addr]) {
+                ws[addr].s = Object.assign({}, ws[addr].s, {
+                  fill: { patternType: "solid", fgColor: { rgb: cor } },
+                });
+              }
+            });
+          }
+        });
+      }
+    }
+
+    ws["!cols"] = colunas.map((col) => {
+      let maior = String(col).length;
+      dados.forEach((d) => {
+        const v = d[col];
+        if (v !== undefined && v !== null) maior = Math.max(maior, String(v).length);
+      });
+      return { wch: Math.min(Math.max(maior + 2, 12), 80) };
+    });
+
+    return ws;
+  }
+
+  function adicionarAba(wb, nomeAba, dados, colunas, opcoes) {
+    const nome = nomeAba.length > 31 ? nomeAba.slice(0, 31) : nomeAba;
+    if (!dados || dados.length === 0) {
+      const wsVazio = construirPlanilha([{ Aviso: "Nenhum registro encontrado nesta categoria." }], ["Aviso"]);
+      XLSX.utils.book_append_sheet(wb, wsVazio, nome);
+      return;
+    }
+    const ws = construirPlanilha(dados, colunas, opcoes);
+    XLSX.utils.book_append_sheet(wb, ws, nome);
+  }
+
+  function gerarBlobXlsx(wb) {
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    return new Blob([wbout], { type: "application/octet-stream" });
+  }
+
+  // ============================================================
+  // PIPELINES DE ALTO NIVEL
+  // ============================================================
+
+  async function compararEGerarRelatorio(filesAnterior, filesAtual, rotuloAnteriorManual, rotuloAtualManual, log) {
+    log("Processando competência ANTERIOR...");
+    const anteriorProc = await processarMultiplos(filesAnterior, log);
+    log("Processando competência ATUAL...");
+    const atualProc = await processarMultiplos(filesAtual, log);
+
+    const rotuloAnterior = rotuloAnteriorManual || anteriorProc.rotulo;
+    const rotuloAtual = rotuloAtualManual || atualProc.rotulo;
+
+    log("Consolidando competência anterior (removendo duplicidades)...");
+    const consAnt = consolidarCompetencia(anteriorProc.registros);
+    log("Consolidando competência atual (removendo duplicidades)...");
+    const consAtu = consolidarCompetencia(atualProc.registros);
+
+    log("Comparando as duas competências...");
+    const { novos, sairam, mantidos, alterados } = compararCompetencias(consAnt.mapa, consAtu.mapa);
+
+    log("Montando histórico consolidado...");
+    const historico = montarHistorico(consAnt.mapa, consAtu.mapa, rotuloAnterior, rotuloAtual);
+
+    const baseAnterior = anteriorProc.registros.slice().sort((a, b) => a.CNES.localeCompare(b.CNES));
+    const baseAtual = atualProc.registros.slice().sort((a, b) => a.CNES.localeCompare(b.CNES));
+
+    const dupAntUnicos = new Set(consAnt.duplicados.map((d) => d.CNES)).size;
+    const dupAtuUnicos = new Set(consAtu.duplicados.map((d) => d.CNES)).size;
+
+    const resumo = [
+      { Indicador: "Competência anterior", Valor: rotuloAnterior },
+      { Indicador: "Competência atual", Valor: rotuloAtual },
+      { Indicador: "Arquivo(s) anterior", Valor: filesAnterior.map((f) => f.name).join(", ") },
+      { Indicador: "Arquivo(s) atual", Valor: filesAtual.map((f) => f.name).join(", ") },
+      { Indicador: "Estabelecimentos únicos - anterior", Valor: consAnt.totalUnico },
+      { Indicador: "Estabelecimentos únicos - atual", Valor: consAtu.totalUnico },
+      { Indicador: "Linhas brutas - anterior", Valor: consAnt.totalBruto },
+      { Indicador: "Linhas brutas - atual", Valor: consAtu.totalBruto },
+      { Indicador: "CNES duplicados - anterior", Valor: dupAntUnicos },
+      { Indicador: "CNES duplicados - atual", Valor: dupAtuUnicos },
+      { Indicador: "Novos estabelecimentos", Valor: novos.length },
+      { Indicador: "Estabelecimentos que saíram", Valor: sairam.length },
+      { Indicador: "Estabelecimentos mantidos", Valor: mantidos.length },
+      { Indicador: "Alterações de nome", Valor: alterados.length },
+      { Indicador: "Data da comparação", Valor: new Date().toLocaleString("pt-BR") },
+    ];
+
+    log("Gerando planilha Excel com o relatório completo...");
+    const wb = XLSX.utils.book_new();
+    adicionarAba(wb, "Resumo", resumo, ["Indicador", "Valor"]);
+    adicionarAba(wb, "Novos", novos, ["CNES", "Estabelecimento"]);
+    adicionarAba(wb, "Saíram", sairam, ["CNES", "Estabelecimento"]);
+    adicionarAba(wb, "Mantidos", mantidos, ["CNES", "Estabelecimento"]);
+    adicionarAba(wb, "Alteração de Nome", alterados, ["CNES", "Nome Anterior", "Nome Atual"]);
+    adicionarAba(wb, "Duplicados Anterior", consAnt.duplicados, ["CNES", "Estabelecimento", "Arquivo"]);
+    adicionarAba(wb, "Duplicados Atual", consAtu.duplicados, ["CNES", "Estabelecimento", "Arquivo"]);
+    adicionarAba(wb, "Histórico", historico, ["CNES", `Nome (${rotuloAnterior})`, `Nome (${rotuloAtual})`, "Status"], {
+      colunaStatus: "Status",
+      coresPorStatus: { NOVO: CORES.novo, SAIU: CORES.saiu, "ALTERAÇÃO DE NOME": CORES.alterado, MANTIDO: CORES.mantido },
+    });
+    adicionarAba(wb, "Base Anterior", baseAnterior, ["CNES", "Estabelecimento", "Arquivo"]);
+    adicionarAba(wb, "Base Atual", baseAtual, ["CNES", "Estabelecimento", "Arquivo"]);
+
+    const blob = gerarBlobXlsx(wb);
+    log("Relatório de comparação gerado com sucesso.");
+
+    return { blob, resumo, rotuloAnterior, rotuloAtual, novos, sairam, mantidos, alterados };
+  }
+
+  async function converterCompetenciaUnica(files, rotuloManual, log) {
+    const proc = await processarMultiplos(files, log);
+    const rotulo = rotuloManual || proc.rotulo;
+    log("Consolidando estabelecimentos e verificando duplicidades...");
+    const cons = consolidarCompetencia(proc.registros);
+
+    const dadosFinal = Object.keys(cons.mapa)
+      .sort()
+      .map((cnes) => ({ CNES: cnes, Estabelecimento: cons.mapa[cnes] }));
+
+    const dupUnicos = new Set(cons.duplicados.map((d) => d.CNES)).size;
+
+    const resumo = [
+      { Indicador: "Competência", Valor: rotulo },
+      { Indicador: "Arquivos processados", Valor: files.length },
+      { Indicador: "Linhas brutas encontradas", Valor: cons.totalBruto },
+      { Indicador: "Estabelecimentos únicos (CNES)", Valor: cons.totalUnico },
+      { Indicador: "CNES com duplicidade", Valor: dupUnicos },
+      { Indicador: "Data da conversão", Valor: new Date().toLocaleString("pt-BR") },
+    ];
+
+    log("Gravando planilha Excel...");
+    const wb = XLSX.utils.book_new();
+    adicionarAba(wb, "Estabelecimentos", dadosFinal, ["CNES", "Estabelecimento"]);
+    adicionarAba(wb, "Duplicados", cons.duplicados, ["CNES", "Estabelecimento", "Arquivo"]);
+    adicionarAba(wb, "Resumo", resumo, ["Indicador", "Valor"]);
+
+    const blob = gerarBlobXlsx(wb);
+    log(`Concluído: ${cons.totalUnico} estabelecimento(s) único(s).`);
+
+    return { blob, rotulo, totalUnico: cons.totalUnico, totalBruto: cons.totalBruto };
+  }
+
+  // ============================================================
+  // SALVAR ARQUIVO (capability "downloads" do runtime do Artifact)
+  // ============================================================
+
+  function baixarViaNavegador(blob, filename, log) {
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      log(`Download de "${filename}" iniciado.`);
+    } catch (erro) {
+      log("Erro ao iniciar o download: " + (erro && erro.message ? erro.message : String(erro)));
+    }
+  }
+
+  async function salvarArquivo(blob, filename, log) {
+    // Dentro do claude.ai, usa a caixa de confirmação nativa da plataforma.
+    if (window.claude && typeof window.claude.use === "function") {
+      let downloads = null;
+      try {
+        downloads = await window.claude.use("downloads");
+      } catch (e) {
+        downloads = null;
+      }
+      if (downloads) {
+        try {
+          const resultado = await downloads.save({ filename, data: blob });
+          log(`Arquivo "${filename}" ${resultado.status === "saved" ? "salvo" : "entregue"} com sucesso.`);
+          return;
+        } catch (erro) {
+          const codigo = erro && erro.code;
+          if (codigo === "declined") {
+            log("Download cancelado.");
+            return;
+          } else if (codigo === "rate_limited") {
+            log("Muitas solicitações de download seguidas — aguarde um instante e tente novamente.");
+            return;
+          }
+          // qualquer outro erro cai no download padrão do navegador, abaixo
+        }
+      }
+    }
+    // Fora do claude.ai (ex.: página hospedada no GitHub Pages) — download padrão do navegador.
+    baixarViaNavegador(blob, filename, log);
+  }
+
+  // ============================================================
+  // INTERFACE
+  // ============================================================
+
+  const areaLog = document.getElementById("log");
+  function log(mensagem) {
+    const hora = new Date().toLocaleTimeString("pt-BR");
+    areaLog.textContent += `[${hora}] ${mensagem}\n`;
+    areaLog.scrollTop = areaLog.scrollHeight;
+  }
+
+  // --- abas ---
+  document.querySelectorAll(".aba-botao").forEach((botao) => {
+    botao.addEventListener("click", () => {
+      document.querySelectorAll(".aba-botao").forEach((b) => b.classList.remove("ativa"));
+      document.querySelectorAll(".painel-aba").forEach((p) => p.classList.remove("ativo"));
+      botao.classList.add("ativa");
+      document.getElementById("painel-" + botao.dataset.aba).classList.add("ativo");
+    });
+  });
+
+  // --- gerenciador de seleção de arquivos reutilizável ---
+  function criarPainelArquivos({ zonaId, inputId, listaId, botaoId, limparId, rotuloId }) {
+    const zona = document.getElementById(zonaId);
+    const input = document.getElementById(inputId);
+    const lista = document.getElementById(listaId);
+    const botao = document.getElementById(botaoId);
+    const limpar = document.getElementById(limparId);
+    const campoRotulo = document.getElementById(rotuloId);
+
+    let arquivos = [];
+
+    function renderizar() {
+      if (arquivos.length === 0) {
+        lista.innerHTML = '<div class="vazio-lista">Nenhum arquivo selecionado.</div>';
+        return;
+      }
+      const ul = document.createElement("ul");
+      ul.className = "lista-arquivos";
+      arquivos.forEach((f, idx) => {
+        const li = document.createElement("li");
+        const span = document.createElement("span");
+        span.textContent = f.name;
+        const rem = document.createElement("button");
+        rem.className = "remover";
+        rem.textContent = "✕";
+        rem.type = "button";
+        rem.addEventListener("click", () => {
+          arquivos.splice(idx, 1);
+          renderizar();
+          atualizarCompetencia();
+        });
+        li.appendChild(span);
+        li.appendChild(rem);
+        ul.appendChild(li);
+      });
+      lista.innerHTML = "";
+      lista.appendChild(ul);
+    }
+
+    async function atualizarCompetencia() {
+      if (arquivos.length === 0) {
+        campoRotulo.value = "";
+        return;
+      }
+      const rotulos = [];
+      for (const f of arquivos) {
+        try {
+          const texto = await lerQrp(f);
+          rotulos.push(detectarCompetencia(f.name, texto));
+        } catch (e) {
+          rotulos.push(f.name.replace(/\.[^.]+$/, ""));
+        }
+      }
+      campoRotulo.value = [...new Set(rotulos)].sort().join(" + ");
+    }
+
+    function adicionarArquivos(novaLista) {
+      Array.from(novaLista).forEach((f) => {
+        if (!arquivos.some((existente) => existente.name === f.name && existente.size === f.size)) {
+          arquivos.push(f);
+        }
+      });
+      renderizar();
+      atualizarCompetencia();
+    }
+
+    botao.addEventListener("click", () => input.click());
+    input.addEventListener("change", (e) => {
+      adicionarArquivos(e.target.files);
+      input.value = "";
+    });
+
+    limpar.addEventListener("click", () => {
+      arquivos = [];
+      renderizar();
+      campoRotulo.value = "";
+    });
+
+    ["dragenter", "dragover"].forEach((evt) =>
+      zona.addEventListener(evt, (e) => {
+        e.preventDefault();
+        zona.classList.add("arrastando");
+      })
+    );
+    ["dragleave", "drop"].forEach((evt) =>
+      zona.addEventListener(evt, (e) => {
+        e.preventDefault();
+        zona.classList.remove("arrastando");
+      })
+    );
+    zona.addEventListener("drop", (e) => {
+      if (e.dataTransfer && e.dataTransfer.files) adicionarArquivos(e.dataTransfer.files);
+    });
+
+    renderizar();
+
+    return {
+      obterArquivos: () => arquivos.slice(),
+      obterRotulo: () => campoRotulo.value.trim() || null,
+    };
+  }
+
+  const painelAnterior = criarPainelArquivos({
+    zonaId: "zona-anterior",
+    inputId: "input-anterior",
+    listaId: "lista-anterior",
+    botaoId: "botao-anterior",
+    limparId: "limpar-anterior",
+    rotuloId: "rotulo-anterior",
+  });
+
+  const painelAtual = criarPainelArquivos({
+    zonaId: "zona-atual",
+    inputId: "input-atual",
+    listaId: "lista-atual",
+    botaoId: "botao-atual",
+    limparId: "limpar-atual",
+    rotuloId: "rotulo-atual",
+  });
+
+  const painelUnica = criarPainelArquivos({
+    zonaId: "zona-unica",
+    inputId: "input-unica",
+    listaId: "lista-unica",
+    botaoId: "botao-unica",
+    limparId: "limpar-unica",
+    rotuloId: "rotulo-unica",
+  });
+
+  function nomeSeguro(rotulo, alternativa) {
+    const base = (rotulo || alternativa || "competencia").toString();
+    const limpo = base.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return limpo || alternativa || "competencia";
+  }
+
+  function marcaTempo() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  }
+
+  // --- botão COMPARAR ---
+  const botaoComparar = document.getElementById("botao-comparar");
+  botaoComparar.addEventListener("click", async () => {
+    const arquivosAnterior = painelAnterior.obterArquivos();
+    const arquivosAtual = painelAtual.obterArquivos();
+
+    if (arquivosAnterior.length === 0) {
+      alert("Selecione o(s) arquivo(s) da competência ANTERIOR.");
+      return;
+    }
+    if (arquivosAtual.length === 0) {
+      alert("Selecione o(s) arquivo(s) da competência ATUAL.");
+      return;
+    }
+
+    const rotuloAnteriorManual = painelAnterior.obterRotulo();
+    const rotuloAtualManual = painelAtual.obterRotulo();
+
+    botaoComparar.disabled = true;
+    const textoOriginal = botaoComparar.textContent;
+    botaoComparar.textContent = "Processando...";
+    document.getElementById("resumo-comparacao").innerHTML = "";
+
+    try {
+      const resultado = await compararEGerarRelatorio(
+        arquivosAnterior,
+        arquivosAtual,
+        rotuloAnteriorManual,
+        rotuloAtualManual,
+        log
+      );
+
+      const nomeArquivo = `Comparacao_QRP_${nomeSeguro(resultado.rotuloAnterior, "ant")}_vs_${nomeSeguro(
+        resultado.rotuloAtual,
+        "atu"
+      )}_${marcaTempo()}.xlsx`;
+
+      await salvarArquivo(resultado.blob, nomeArquivo, log);
+
+      const div = document.getElementById("resumo-comparacao");
+      div.innerHTML = `
+        <div class="resumo-cartoes">
+          <div class="resumo-item novo"><span class="numero">${resultado.novos.length}</span>Novos</div>
+          <div class="resumo-item saiu"><span class="numero">${resultado.sairam.length}</span>Saíram</div>
+          <div class="resumo-item mantido"><span class="numero">${resultado.mantidos.length}</span>Mantidos</div>
+          <div class="resumo-item alterado"><span class="numero">${resultado.alterados.length}</span>Alteração de nome</div>
+        </div>
+      `;
+    } catch (erro) {
+      log("ERRO: " + (erro && erro.message ? erro.message : String(erro)));
+      alert("Ocorreu um erro durante a comparação:\n\n" + (erro && erro.message ? erro.message : erro));
+    } finally {
+      botaoComparar.disabled = false;
+      botaoComparar.textContent = textoOriginal;
+    }
+  });
+
+  // --- botão CONVERTER ---
+  const botaoConverter = document.getElementById("botao-converter");
+  botaoConverter.addEventListener("click", async () => {
+    const arquivos = painelUnica.obterArquivos();
+    if (arquivos.length === 0) {
+      alert("Selecione ao menos um arquivo .QRP.");
+      return;
+    }
+    const rotuloManual = painelUnica.obterRotulo();
+
+    botaoConverter.disabled = true;
+    const textoOriginal = botaoConverter.textContent;
+    botaoConverter.textContent = "Processando...";
+    document.getElementById("resumo-conversao").innerHTML = "";
+
+    try {
+      const resultado = await converterCompetenciaUnica(arquivos, rotuloManual, log);
+      const nomeArquivo = `QRP_${nomeSeguro(resultado.rotulo, "competencia")}_${marcaTempo()}_estabelecimentos.xlsx`;
+      await salvarArquivo(resultado.blob, nomeArquivo, log);
+
+      const div = document.getElementById("resumo-conversao");
+      div.innerHTML = `
+        <div class="resumo-cartoes">
+          <div class="resumo-item mantido"><span class="numero">${resultado.totalUnico}</span>Estabelecimentos únicos</div>
+          <div class="resumo-item mantido"><span class="numero">${resultado.totalBruto}</span>Linhas brutas lidas</div>
+        </div>
+      `;
+    } catch (erro) {
+      log("ERRO: " + (erro && erro.message ? erro.message : String(erro)));
+      alert("Ocorreu um erro durante a conversão:\n\n" + (erro && erro.message ? erro.message : erro));
+    } finally {
+      botaoConverter.disabled = false;
+      botaoConverter.textContent = textoOriginal;
+    }
+  });
+
+  log("Programa carregado. Selecione os arquivos .QRP para começar.");
+})();
+</script>
+</body>
+</html>
